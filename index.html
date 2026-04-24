@@ -1,22 +1,591 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>360 Test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sligo University Hospital — Wayfinding</title>
+
+  <!-- Pannellum from CDN -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
   <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+  <!-- Distinctive typography: Fraunces for display, IBM Plex Sans for body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
-    body { margin: 0; }
-    #panorama { width: 100vw; height: 100vh; }
+    :root {
+      --hse-green: #006b54;
+      --hse-green-dark: #004d3d;
+      --hse-green-light: #e8f2ef;
+      --ink: #1a1a1a;
+      --ink-muted: #5a5a5a;
+      --paper: #fafaf7;
+      --paper-warm: #f4f1ea;
+      --rule: #d8d4c8;
+      --accent: #c8553d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--hse-green);
+      color: white;
+      padding: 1.25rem 2rem;
+      border-bottom: 4px solid var(--hse-green-dark);
+    }
+
+    header .wordmark {
+      font-family: 'Fraunces', serif;
+      font-weight: 600;
+      font-size: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    header .subtitle {
+      font-size: 0.85rem;
+      opacity: 0.85;
+      font-weight: 400;
+      margin-top: 0.15rem;
+    }
+
+    /* Main container */
+    main {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* Destination picker */
+    .picker {
+      background: white;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .picker-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .picker h1 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 1.25rem;
+      letter-spacing: -0.015em;
+    }
+
+    .destinations {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .dest-btn {
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--rule);
+      background: white;
+      color: var(--ink);
+      cursor: pointer;
+      border-radius: 3px;
+      text-align: left;
+      transition: all 0.15s ease;
+    }
+
+    .dest-btn:hover {
+      border-color: var(--hse-green);
+      background: var(--hse-green-light);
+    }
+
+    .dest-btn.active {
+      background: var(--hse-green);
+      color: white;
+      border-color: var(--hse-green);
+    }
+
+    .dest-btn .dest-meta {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 400;
+      opacity: 0.7;
+      margin-top: 0.1rem;
+    }
+
+    /* Route */
+    .route {
+      background: white;
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .route-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--rule);
+      background: var(--paper-warm);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .route-title {
+      font-family: 'Fraunces', serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .route-meta {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+    }
+
+    .route-meta strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* Waypoints */
+    .waypoints {
+      list-style: none;
+      padding: 0;
+    }
+
+    .waypoint {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 1rem;
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--rule);
+      position: relative;
+    }
+
+    .waypoint:last-child {
+      border-bottom: none;
+    }
+
+    /* Vertical line connecting waypoints */
+    .waypoint:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 1.5rem;
+      top: 3.5rem;
+      bottom: -0.5rem;
+      width: 2px;
+      background: var(--rule);
+      margin-left: 11px;
+    }
+
+    .waypoint-marker {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: white;
+      border: 2px solid var(--hse-green);
+      color: var(--hse-green);
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.25rem;
+      z-index: 1;
+      position: relative;
+    }
+
+    .waypoint.arrival .waypoint-marker {
+      background: var(--hse-green);
+      color: white;
+    }
+
+    .waypoint-body {
+      min-width: 0;
+    }
+
+    .waypoint-direction {
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .waypoint-instruction {
+      font-size: 1.05rem;
+      line-height: 1.5;
+      color: var(--ink);
+      margin-bottom: 0.25rem;
+    }
+
+    .waypoint-detail {
+      font-size: 0.9rem;
+      color: var(--ink-muted);
+    }
+
+    /* Panorama section */
+    .panorama-section {
+      margin-top: 1rem;
+      border: 1px solid var(--rule);
+      border-radius: 3px;
+      overflow: hidden;
+      background: var(--paper-warm);
+    }
+
+    .panorama-label {
+      padding: 0.6rem 0.9rem;
+      background: var(--paper-warm);
+      border-bottom: 1px solid var(--rule);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+    }
+
+    .panorama-label strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .panorama-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    .panorama-viewer {
+      width: 100%;
+      height: 320px;
+      background: #222;
+    }
+
+    .panorama-hint {
+      padding: 0.5rem 0.9rem;
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      background: white;
+      border-top: 1px solid var(--rule);
+      font-style: italic;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--ink-muted);
+    }
+
+    .empty-state-icon {
+      font-family: 'Fraunces', serif;
+      font-size: 2.5rem;
+      color: var(--hse-green);
+      opacity: 0.4;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Footer note */
+    .demo-note {
+      max-width: 780px;
+      margin: 2rem auto 0;
+      padding: 1rem 1.5rem;
+      border-left: 3px solid var(--accent);
+      background: white;
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      border-radius: 0 3px 3px 0;
+    }
+
+    .demo-note strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      main { padding: 1.25rem 1rem 3rem; }
+      .picker { padding: 1.25rem; }
+      .picker h1 { font-size: 1.4rem; }
+      .waypoint { padding: 1.25rem 1rem; grid-template-columns: 36px 1fr; gap: 0.75rem; }
+      .panorama-viewer { height: 240px; }
+    }
   </style>
 </head>
 <body>
-  <div id="panorama"></div>
+
+  <header>
+    <div class="wordmark">Sligo University Hospital</div>
+    <div class="subtitle">Wayfinding — find your way around the hospital</div>
+  </header>
+
+  <main>
+    <div class="picker">
+      <div class="picker-label">Step 1</div>
+      <h1>Where are you going?</h1>
+      <div class="destinations" id="destinations">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <div id="route-container"></div>
+  </main>
+
+  <div class="demo-note">
+    <strong>Demo pilot.</strong> One route (Paediatrics) has a 360° view attached to the waiting area waypoint to demonstrate the pattern. In the full app, any waypoint could carry a panorama as optional context.
+  </div>
+
   <script>
-    pannellum.viewer('panorama', {
-      type: 'equirectangular',
-      panorama: 'panorama.jpg',
-      autoLoad: true
+    // Data model: destinations and their routes
+    // Any waypoint can optionally carry a `panorama` field pointing at an equirectangular JPEG.
+    const destinations = [
+      {
+        id: 'paediatrics',
+        name: 'Paediatrics',
+        meta: 'Ground floor, West Wing',
+        from: 'Main Entrance',
+        distance: '180m',
+        time: '3 min walk',
+        waypoints: [
+          {
+            direction: 'Start',
+            instruction: 'Enter through the Main Entrance.',
+            detail: 'Automatic doors, covered drop-off area outside.'
+          },
+          {
+            direction: 'Walk straight',
+            instruction: 'Pass the main reception desk on your right.',
+            detail: 'Continue along the main corridor for about 40 metres.'
+          },
+          {
+            direction: 'Turn left',
+            instruction: 'At the junction with the green wayfinding strip, turn left toward the West Wing.',
+            detail: 'Look for the overhead sign reading Paediatrics / West Wing.'
+          },
+          {
+            direction: 'Continue',
+            instruction: 'Walk through the double doors into the Paediatrics waiting area.',
+            detail: 'Bright, open space with seating on the left.',
+            panorama: 'https://visitingsuh-cmd.github.io/360/panorama.jpg',
+            panoramaCaption: 'Paediatrics waiting area',
+            panoramaHint: 'Drag to look around. This is what the space looks like when you arrive.'
+          },
+          {
+            direction: 'Arrive',
+            instruction: 'Check in at the Paediatrics reception desk.',
+            detail: 'Staff will direct you to the correct clinic room.',
+            arrival: true
+          }
+        ]
+      },
+      {
+        id: 'ed',
+        name: 'Emergency Department',
+        meta: 'Ground floor, East entrance',
+        from: 'Main Entrance',
+        distance: '120m',
+        time: '2 min walk',
+        waypoints: [
+          {
+            direction: 'Start',
+            instruction: 'Exit the Main Entrance and turn left along the front of the building.',
+            detail: 'Follow the red signage strip on the exterior wall.'
+          },
+          {
+            direction: 'Continue',
+            instruction: 'Walk toward the separate ED entrance, signposted Accident & Emergency.',
+            detail: 'Ambulance bay is on your right — do not cross this area.'
+          },
+          {
+            direction: 'Arrive',
+            instruction: 'Enter the ED through the dedicated patient entrance and check in at triage.',
+            detail: 'In a medical emergency, dial 999 or alert nearby staff.',
+            arrival: true
+          }
+        ]
+      },
+      {
+        id: 'radiology',
+        name: 'Radiology',
+        meta: 'Lower ground, Main block',
+        from: 'Main Entrance',
+        distance: '220m',
+        time: '4 min walk',
+        waypoints: [
+          {
+            direction: 'Start',
+            instruction: 'Enter through the Main Entrance and continue past reception.',
+            detail: ''
+          },
+          {
+            direction: 'Turn right',
+            instruction: 'At the main corridor junction, turn right toward the lifts.',
+            detail: 'Lift lobby is marked with a blue overhead sign.'
+          },
+          {
+            direction: 'Take the lift',
+            instruction: 'Take Lift B down one floor to Lower Ground.',
+            detail: 'Radiology is signposted on exit.'
+          },
+          {
+            direction: 'Arrive',
+            instruction: 'Check in at the Radiology reception.',
+            detail: 'Bring your appointment letter or referral form.',
+            arrival: true
+          }
+        ]
+      },
+      {
+        id: 'canteen',
+        name: 'Staff Canteen',
+        meta: 'First floor, Main block',
+        from: 'Main Entrance',
+        distance: '150m',
+        time: '3 min walk',
+        waypoints: [
+          {
+            direction: 'Start',
+            instruction: 'From the Main Entrance, walk past reception to the lift lobby.',
+            detail: ''
+          },
+          {
+            direction: 'Take the lift',
+            instruction: 'Take Lift A up one floor to First Floor.',
+            detail: ''
+          },
+          {
+            direction: 'Arrive',
+            instruction: 'Turn right out of the lift — the canteen is at the end of the corridor.',
+            detail: 'Menu and opening hours displayed outside.',
+            arrival: true
+          }
+        ]
+      }
+    ];
+
+    // Render destination buttons
+    const destContainer = document.getElementById('destinations');
+    destinations.forEach(d => {
+      const btn = document.createElement('button');
+      btn.className = 'dest-btn';
+      btn.dataset.id = d.id;
+      btn.innerHTML = `${d.name}<span class="dest-meta">${d.meta}</span>`;
+      btn.addEventListener('click', () => selectDestination(d.id));
+      destContainer.appendChild(btn);
     });
+
+    // Track active panorama viewers so we can clean them up
+    let activeViewers = [];
+
+    function selectDestination(id) {
+      // Update button states
+      document.querySelectorAll('.dest-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.id === id);
+      });
+
+      // Clean up any existing panorama viewers before re-rendering
+      activeViewers.forEach(v => { try { v.destroy(); } catch(e){} });
+      activeViewers = [];
+
+      const dest = destinations.find(d => d.id === id);
+      renderRoute(dest);
+    }
+
+    function renderRoute(dest) {
+      const container = document.getElementById('route-container');
+      container.innerHTML = `
+        <div class="route">
+          <div class="route-header">
+            <div class="route-title">From ${dest.from} to ${dest.name}</div>
+            <div class="route-meta"><strong>${dest.distance}</strong> · ${dest.time}</div>
+          </div>
+          <ol class="waypoints" id="waypoints"></ol>
+        </div>
+      `;
+
+      const list = document.getElementById('waypoints');
+      dest.waypoints.forEach((wp, i) => {
+        const li = document.createElement('li');
+        li.className = 'waypoint' + (wp.arrival ? ' arrival' : '');
+
+        const markerContent = wp.arrival
+          ? '✓'
+          : (i + 1);
+
+        // Build the body
+        let bodyHTML = `
+          <div class="waypoint-marker">${markerContent}</div>
+          <div class="waypoint-body">
+            <div class="waypoint-direction">${wp.direction}</div>
+            <div class="waypoint-instruction">${wp.instruction}</div>
+            ${wp.detail ? `<div class="waypoint-detail">${wp.detail}</div>` : ''}
+        `;
+
+        if (wp.panorama) {
+          const viewerId = `pano-${dest.id}-${i}`;
+          bodyHTML += `
+            <div class="panorama-section">
+              <div class="panorama-label">
+                <svg class="panorama-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/>
+                </svg>
+                <span><strong>${wp.panoramaCaption}</strong> — 360° view</span>
+              </div>
+              <div id="${viewerId}" class="panorama-viewer"></div>
+              ${wp.panoramaHint ? `<div class="panorama-hint">${wp.panoramaHint}</div>` : ''}
+            </div>
+          `;
+        }
+
+        bodyHTML += `</div>`;
+        li.innerHTML = bodyHTML;
+        list.appendChild(li);
+
+        // Initialise the panorama viewer after the DOM node exists
+        if (wp.panorama) {
+          const viewerId = `pano-${dest.id}-${i}`;
+          const viewer = pannellum.viewer(viewerId, {
+            type: 'equirectangular',
+            panorama: wp.panorama,
+            autoLoad: true,
+            showControls: true,
+            showFullscreenCtrl: true,
+            showZoomCtrl: false,
+            compass: false,
+            mouseZoom: true,
+            hfov: 100
+          });
+          activeViewers.push(viewer);
+        }
+      });
+    }
+
+    // Auto-select Paediatrics on load so the demo shows the 360 immediately
+    selectDestination('paediatrics');
   </script>
+
 </body>
 </html>
