@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>360 Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+  <style>
+    body { margin: 0; }
+    #panorama { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="panorama"></div>
+  <script>
+    pannellum.viewer('panorama', {
+      type: 'equirectangular',
+      panorama: 'panorama.jpg',
+      autoLoad: true
+    });
+  </script>
+</body>
+</html>
